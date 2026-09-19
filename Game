@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#091b2b" />
+  <title>Flappy TST</title>
+  <style>
+    :root{
+      --bg:#081b2b;
+      --panel:#0d2340;
+      --sky1:#8fd9f0;
+      --sky2:#dff9ff;
+      --gold:#ffd166;
+      --gold-dark:#bf8934;
+      --forest:#2c5b6a;
+      --grass:#81d6b7;
+      --pipe:#4b7a5d;
+      --pipe2:#7ec56a;
+      --ink:#0d1b2b;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{
+      margin:0;
+      min-height:100%;
+      background:#000;
+      color:white;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      overflow:hidden;
+    }
+
+    body{
+      display:grid;
+      place-items:center;
+      background:#000;
+    }
+
+    #app{
+      position:relative;
+      width:min(100vw, 520px);
+      height:min(100vh, 850px);
+      min-height:560px;
+      background:linear-gradient(#8fd9f0, #dff9ff);
+      overflow:hidden;
+      box-shadow:0 25px 90px rgba(0,0,0,.55);
+    }
+
+    canvas{
+      display:block;
+      width:100%;
+      height:100%;
+      image-rendering:pixelated;
+      touch-action:none;
+      cursor: pointer;
+      user-select:none;
+    }
+
+    .hud{
+      position:absolute;
+      inset:14px 18px auto 18px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      pointer-events:none;
+      z-index:3;
+      text-shadow:2px 3px 0 rgba(19,40,61,.7);
+    }
+
+    .brand{
+      font-weight:900;
+      letter-spacing:.12em;
+      font-size:clamp(16px, 3vw, 30px);
+      color:#f7fbff;
+    }
+
+    .score-wrap{
+      text-align:right;
+      font-weight:900;
+      font-size:clamp(28px, 7vw, 52px);
+      line-height:1;
+      color:#fff;
+    }
+
+    .score-wrap small{
+      display:block;
+      font-size:10px;
+      letter-spacing:.18em;
+      opacity:.9;
+      margin-top:4px;
+    }
+
+    .panel{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      background:rgba(3, 17, 30, .34);
+      z-index:6;
+      padding:24px;
+    }
+
+    .card{
+      width:min(88%,360px);
+      background:linear-gradient(180deg, rgba(20,53,78,.95), rgba(12,22,34,.94));
+      border:4px solid rgba(255,255,255,.7);
+      border-radius:22px;
+      padding:24px 22px 18px;
+      text-align:center;
+      box-shadow:0 18px 0 rgba(4, 17, 29, .75), 0 25px 50px rgba(0,0,0,.35);
+    }
+
+    h1{
+      margin:0 0 8px;
+      font-size:clamp(30px, 9vw, 60px);
+      font-weight:900;
+      letter-spacing:.04em;
+      color:var(--gold);
+      text-shadow:4px 4px 0 #8e4b52;
+    }
+
+    .subtitle{
+      margin:0 0 20px;
+      color:#dffcff;
+      font-weight:700;
+      letter-spacing:.04em;
+      opacity:.94;
+    }
+
+    button{
+      appearance:none;
+      border:0;
+      border-radius:14px;
+      padding:14px 24px;
+      font:inherit;
+      font-weight:900;
+      color:#1b2d3f;
+      background:var(--gold);
+      cursor:pointer;
+      box-shadow:0 6px 0 var(--gold-dark);
+      transition:transform .08s ease, filter .08s ease;
+    }
+
+    button:active{
+      transform:translateY(4px);
+      box-shadow:0 2px 0 var(--gold-dark);
+    }
+
+    .hint{
+      margin-top:16px;
+      font-size:13px;
+      line-height:1.6;
+      color:#dfefff;
+      opacity:.9;
+    }
+
+    .hidden{ display:none !important; }
+
+    .qr-btn{
+      position:absolute;
+      right:12px;
+      bottom:12px;
+      z-index:7;
+      font-size:11px;
+      padding:9px 12px;
+      border-radius:10px;
+      box-shadow:0 5px 0 var(--gold-dark);
+    }
+
+    .qr{
+      position:absolute;
+      right:12px;
+      bottom:12px;
+      z-index:8;
+      width:110px;
+      padding:7px;
+      background:#fff;
+      border-radius:12px;
+      box-shadow:0 10px 30px rgba(0,0,0,.25);
+      display:none;
+    }
+
+    .qr img{
+      width:100%;
+      display:block;
+      image-rendering:pixelated;
+      background:#fff;
+      border-radius:8px;
+    }
+
+    .qr b{
+      display:block;
+      margin-top:6px;
+      color:#123;
+      font-size:9px;
+      text-align:center;
+      letter-spacing:.12em;
+    }
+
+    .show-qr .qr{ display:block; }
+    .show-qr .qr-btn{ display:none; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="game" aria-label="Flappy TST game"></canvas>
+
+    <div class="hud">
+      <div class="brand">FLAPPY TST</div>
+      <div class="score-wrap">
+        <span id="score">0</span>
+        <small>BEST <b id="best">0</b></small>
+      </div>
+    </div>
+
+    <div class="panel" id="panel">
+      <div class="card">
+        <h1 id="title">FLAPPY TST</h1>
+        <p class="subtitle" id="message">Mountain rhythm challenge</p>
+        <button id="startBtn">TAP TO FLY</button>
+        <div class="hint">Tap, click, or press <b>Space</b> to flap<br>Pass the pipes, hit the high score.</div>
+      </div>
+    </div>
+
+    <button class="qr-btn" id="qrBtn">▦ SHARE</button>
+
+    <div class="qr" id="qrBox">
+      <img id="qrImg" alt="QR code" />
+      <b>SCAN TO PLAY</b>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+      const app = document.getElementById('app');
+      const panel = document.getElementById('panel');
+      const title = document.getElementById('title');
+      const message = document.getElementById('message');
+      const startBtn = document.getElementById('startBtn');
+      const scoreEl = document.getElementById('score');
+      const bestEl = document.getElementById('best');
+      const qrBtn = document.getElementById('qrBtn');
+      const qrBox = document.getElementById('qrBox');
+      const qrImg = document.getElementById('qrImg');
+
+      const gameUrl = "https://son-pov.github.io/flappy-tst-playable/";
+      qrImg.src = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=" + encodeURIComponent(gameUrl);
+
+      let W = 520;
+      let H = 850;
+      let state = "ready";
+      let score = 0;
+      let best = Number(localStorage.getItem("flappyTSTBest")) || 0;
+      let lastTime = 0;
+      let pipes = [];
+      let particles = [];
+      let audioCtx = null;
+      let audioStarted = false;
+
+      const bird = {
+        x: 130,
+        y: 360,
+        r: 17,
+        vy: 0,
+        rot: 0
+      };
+
+      function setCanvasSize() {
+        const rect = app.getBoundingClientRect();
+        W = rect.width;
+        H = rect.height;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function clamp(v, min, max) {
+        return Math.max(min, Math.min(max, v));
+      }
+
+      function rand(min, max) {
+        return min + Math.random() * (max - min);
+      }
+
+      function ensureAudio() {
+        if (!audioCtx) {
+          const AudioCtor = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtor) return;
+          audioCtx = new AudioCtor();
+        }
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+      }
+
+      function playTone(freq, duration, type = "square", gainValue = 0.05) {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.exponentialRampToValueAtTime(gainValue, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + duration);
+      }
+
+      let melodyStep = 0;
+      let musicTimer = null;
+
+      function startMusicLoop() {
+        if (musicTimer) return;
+        const notes = [261.63, 329.63, 392.0, 523.25, 392.0, 329.63, 293.66, 349.23];
+        musicTimer = setInterval(() => {
+          if (state !== "playing" || !audioCtx) return;
+          const n = notes[melodyStep % notes.length];
+          playTone(n, 0.22, "triangle", 0.03);
+          melodyStep++;
+        }, 260);
+      }
+
+      function flap() {
+        ensureAudio();
+        if (!audioStarted) {
+          audioStarted = true;
+          startMusicLoop();
+        }
+
+        if (state === "ready") {
+          resetGame();
+          state = "playing";
+          panel.classList.add("hidden");
+        } else if (state === "over") {
+          resetGame();
+          state = "playing";
+          panel.classList.add("hidden");
+        }
+
+        if (state === "playing") {
+          bird.vy = -430;
+          bird.rot = -0.55;
+          playTone(700, 0.08, "square", 0.025);
+
+          for (let i = 0; i < 6; i++) {
+            particles.push({
+              x: bird.x - 10,
+              y: bird.y + 4,
+              vx: rand(-100, -30),
+              vy: rand(-40, 40),
+              life: 0.32
+            });
+          }
+        }
+      }
+
+      function resetGame() {
+        score = 0;
+        scoreEl.textContent = "0";
+        bird.x = 130;
+        bird.y = H * 0.42;
+        bird.vy = 0;
+        bird.rot = 0;
+        pipes = [];
+        particles = [];
+        for (let i = 0; i < 3; i++) {
+          pipes.push({
+            x: W + 180 + i * 220,
+            gapY: rand(H * 0.26, H * 0.52),
+            gapHeight: clamp(H * 0.25, 145, 170),
+            passed: false
+          });
+        }
+      }
+
+      function gameOver() {
+        if (state !== "playing") return;
+        state = "over";
+        playTone(120, 0.26, "sawtooth", 0.025);
+
+        best = Math.max(best, score);
+        localStorage.setItem("flappyTSTBest", String(best));
+        bestEl.textContent = String(best);
+
+        title.textContent = "GAME OVER";
+        message.textContent = "Score " + score + " • Best " + best;
+        startBtn.textContent = "PLAY AGAIN";
+        panel.classList.remove("hidden");
+      }
+
+      function update(dt) {
+        if (state !== "playing") return;
+
+        bird.vy += 1150 * dt;
+        bird.y += bird.vy * dt;
+        bird.rot = clamp(bird.vy / 650, -0.8, 1.2);
+
+        const speed = 190 + score * 2.5;
+
+        for (const p of pipes) {
+          p.x -= speed * dt;
+
+          if (!p.passed && p.x + 54 < bird.x) {
+            p.passed = true;
+            score++;
+            scoreEl.textContent = String(score);
+            playTone(940, 0.07, "triangle", 0.025);
+          }
+        }
+
+        if (pipes.length && pipes[0].x < -80) {
+          pipes.shift();
+          pipes.push({
+            x: pipes[pipes.length - 1].x + 220,
+            gapY: rand(H * 0.26, H * 0.52),
+            gapHeight: clamp(H * 0.25, 145, 170),
+            passed: false
+          });
+        }
+
+        for (const p of particles) {
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.life -= dt;
+        }
+        particles = particles.filter(p => p.life > 0);
+
+        const groundY = H - 64;
+
+        const hitPipe =
+          pipes.some(p => {
+            const pipeX = p.x;
+            const pipeWidth = 56;
+            const left = bird.x - bird.r;
+            const right = bird.x + bird.r;
+            const top = bird.y - bird.r;
+            const bottom = bird.y + bird.r;
+
+            const withinX = right > pipeX && left < pipeX + pipeWidth;
+            const hitTop = top < p.gapY;
+            const hitBottom = bottom > p.gapY + p.gapHeight;
+
+            return withinX && (hitTop || hitBottom);
+          });
+
+        const hitGround = bird.y + bird.r > groundY;
+        const hitCeiling = bird.y - bird.r < 0;
+
+        if (hitPipe || hitGround || hitCeiling) {
+          gameOver();
+        }
+      }
+
+      function drawBackground() {
+        const sky = ctx.createLinearGradient(0, 0, 0, H);
+        sky.addColorStop(0, "#8ad7ee");
+        sky.addColorStop(0.8, "#c7f5ff");
+        sky.addColorStop(1, "#dff9ff");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, W, H);
+
+        // soft clouds
+        drawCloud(W * 0.15, H * 0.18, 1.15);
+        drawCloud(W * 0.46, H * 0.14, 1.35);
+        drawCloud(W * 0.78, H * 0.2, 1.1);
+
+        // mountain layers
+        ctx.fillStyle = "#bfebf7";
+        ctx.beginPath();
+        ctx.moveTo(0, H * 0.73);
+        ctx.lineTo(W * 0.12, H * 0.4);
+        ctx.lineTo(W * 0.32, H * 0.72);
+        ctx.lineTo(W * 0.52, H * 0.3);
+        ctx.lineTo(W * 0.7, H * 0.58);
+        ctx.lineTo(W * 0.82, H * 0.34);
+        ctx.lineTo(W, H * 0.68);
+        ctx.lineTo(W, H);
+        ctx.lineTo(0, H);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = "#7dbad4";
+        ctx.beginPath();
+        ctx.moveTo(0, H * 0.8);
+        ctx.lineTo(W * 0.18, H * 0.5);
+        ctx.lineTo(W * 0.33, H * 0.75);
+        ctx.lineTo(W * 0.5, H * 0.45);
+        ctx.lineTo(W * 0.67, H * 0.82);
+        ctx.lineTo(W * 0.86, H * 0.52);
+        ctx.lineTo(W, H * 0.78);
+        ctx.lineTo(W, H);
+        ctx.lineTo(0, H);
+        ctx.closePath();
+        ctx.fill();
+
+        // forest
+        ctx.fillStyle = "#3d7a7e";
+        for (let x = -18; x < W + 20; x += 30) {
+          ctx.beginPath();
+          ctx.moveTo(x, H - 64);
+          ctx.lineTo(x + 18, H - 134);
+          ctx.lineTo(x + 36, H - 64);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // ground
+        ctx.fillStyle = "#eafcff";
+        ctx.fillRect(0, H - 64, W, 64);
+        ctx.fillStyle = "#b6ecdf";
+        for (let x = 0; x < W; x += 16) {
+          ctx.fillRect(x, H - 64, 12, 8);
+          ctx.fillRect(x + 6, H - 52, 8, 6);
+        }
+      }
+
+      function drawCloud(x, y, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scale, scale);
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.beginPath();
+        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.arc(18, -6, 16, 0, Math.PI * 2);
+        ctx.arc(36, 0, 20, 0, Math.PI * 2);
+        ctx.arc(16, 6, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawPipe(pipe) {
+        const x = pipe.x;
+        const pipeWidth = 56;
+        const pipeTopHeight = pipe.gapY;
+        const pipeBottomY = pipe.gapY + pipe.gapHeight;
+        const groundY = H - 64;
+
+        // top pipe
+        ctx.fillStyle = "#4a7b59";
+        ctx.fillRect(x, 0, pipeWidth, pipeTopHeight);
+
+        ctx.fillStyle = "#7ec56a";
+        ctx.fillRect(x + 6, 0, 8, pipeTopHeight);
+        ctx.fillRect(x + 18, 0, 8, pipeTopHeight);
+
+        ctx.fillStyle = "#2f4d42";
+        ctx.fillRect(x, pipeTopHeight - 18, pipeWidth, 18);
+
+        // bottom pipe
+        ctx.fillStyle = "#4a7b59";
+        ctx.fillRect(x, pipeBottomY, pipeWidth, groundY - pipeBottomY);
+
+        ctx.fillStyle = "#7ec56a";
+        ctx.fillRect(x + 6, pipeBottomY, 8, groundY - pipeBottomY);
+        ctx.fillRect(x + 18, pipeBottomY, 8, groundY - pipeBottomY);
+
+        ctx.fillStyle = "#2f4d42";
+        ctx.fillRect(x, pipeBottomY, pipeWidth, 18);
+      }
+
+      function drawParticles() {
+        for (const p of particles) {
+          ctx.globalAlpha = Math.max(0, p.life * 3);
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(p.x, p.y, 5, 5);
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function drawBird() {
+        ctx.save();
+        ctx.translate(bird.x, bird.y);
+        ctx.rotate(bird.rot);
+
+        // body
+        ctx.fillStyle = "#6a2d2d";
+        ctx.fillRect(-16, -13, 30, 26);
+
+        // face
+        ctx.fillStyle = "#f0bd8f";
+        ctx.fillRect(-8, -9, 22, 18);
+
+        // belly
+        ctx.fillStyle = "#e9f6ff";
+        ctx.fillRect(-2, -3, 12, 12);
+
+        // eye
+        ctx.fillStyle = "#243b55";
+        ctx.fillRect(8, -4, 5, 5);
+
+        // beak
+        ctx.fillStyle = "#e7c65b";
+        ctx.fillRect(15, 0, 13, 5);
+
+        // wing
+        ctx.fillStyle = "#4db7b7";
+        ctx.fillRect(-13, 6, 18, 8);
+
+        // tail
+        ctx.fillStyle = "#d7d9e5";
+        ctx.fillRect(-22, 0, 8, 5);
+
+        // small sparkle
+        ctx.fillStyle = "#fff7d0";
+        ctx.fillRect(2, -22, 6, 10);
+
+        ctx.restore();
+      }
+
+      function render() {
+        ctx.clearRect(0, 0, W, H);
+        drawBackground();
+
+        for (const p of pipes) {
+          drawPipe(p);
+        }
+
+        drawParticles();
+        drawBird();
+      }
+
+      function loop(ts) {
+        const dt = Math.min((ts - lastTime) / 1000 || 0.016, 0.033);
+        lastTime = ts;
+        update(dt);
+        render();
+        requestAnimationFrame(loop);
+      }
+
+      // UI events
+      startBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        flap();
+      });
+
+      qrBtn.addEventListener("click", () => {
+        app.classList.add("show-qr");
+      });
+
+      app.addEventListener("pointerdown", (e) => {
+        if (e.target.closest("button")) return;
+        flap();
+      });
+
+      window.addEventListener("keydown", (e) => {
+        if (e.code === "Space" || e.code === "ArrowUp") {
+          e.preventDefault();
+          flap();
+        }
+      });
+
+      window.addEventListener("resize", setCanvasSize);
+
+      bestEl.textContent = String(best);
+      resetGame();
+      setCanvasSize();
+      title.textContent = "FLAPPY TST";
+      message.textContent = "Mountain rhythm challenge";
+      panel.classList.remove("hidden");
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>
